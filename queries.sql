@@ -104,3 +104,40 @@ SELECT
     ROUND(AVG(dayslatelast30), 2) AS avg_days_late
 FROM employees
 GROUP BY termd;
+
+-- ============================================
+-- Query 6: Department attrition ranking (CTE + window function)
+-- Ranks departments by attrition rate using RANK()
+-- ============================================
+WITH dept_attrition AS (
+    SELECT department,
+           COUNT(*) AS total,
+           SUM(CASE WHEN termd = 1 THEN 1 ELSE 0 END) AS terminated,
+           ROUND(SUM(CASE WHEN termd = 1 THEN 1 ELSE 0 END) * 100.0 / COUNT(*), 2) AS attrition_rate
+    FROM employees
+    GROUP BY department
+)
+SELECT *, RANK() OVER (ORDER BY attrition_rate DESC) AS attrition_rank
+FROM dept_attrition;
+
+-- ============================================
+-- Query 7: Engagement and satisfaction vs attrition
+-- Checks whether self-reported engagement/satisfaction relates to who leaves
+-- ============================================
+SELECT 
+    CASE WHEN termd = 1 THEN 'Terminated' ELSE 'Active' END AS status,
+    ROUND(AVG(engagementsurvey), 2) AS avg_engagement,
+    ROUND(AVG(empsatisfaction), 2) AS avg_satisfaction
+FROM employees
+GROUP BY termd;
+
+-- ============================================
+-- Query 8: Average tenure before leaving, by department
+-- Checks how long employees typically stay before leaving, per department
+-- ============================================
+SELECT department,
+       ROUND(AVG(dateoftermination::date - dateofhire::date), 0) AS avg_days_before_leaving
+FROM employees
+WHERE termd = 1
+GROUP BY department
+ORDER BY avg_days_before_leaving;
